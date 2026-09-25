@@ -17,7 +17,7 @@ ThriveCart holds your products, orders, customers, subscriptions and affiliates.
 
 This connects it to your AI assistant, with the multi-account problem solved. A ThriveCart API key reaches exactly one account, so running more than one cart means more than one key, and figures from one silently passing as the whole business is the mistake worth designing against.
 
-Built and maintained by [Navid Moazzez](https://navid.me?utm_source=github&utm_medium=readme&utm_campaign=thrivecart-mcp-cli).
+Built and maintained by [Navid Moazzez](https://navid.me?utm_source=github&utm_medium=referral&utm_campaign=thrivecart-mcp-cli&utm_content=readme).
 
 ```
 You: revenue by product last quarter, both carts, separately
@@ -661,9 +661,9 @@ Navid Moazzez is a leading AI business strategist, and the host of the AI Creato
 
 **Links**
 
-- Personal website: [navid.me](https://navid.me?utm_source=github&utm_medium=readme&utm_campaign=thrivecart-mcp-cli)
-- Link in bio: [navid.bio](https://navid.bio?utm_source=github&utm_medium=readme&utm_campaign=thrivecart-mcp-cli)
-- Navid Media: [navid.media](https://navid.media?utm_source=github&utm_medium=readme&utm_campaign=thrivecart-mcp-cli)
+- Personal website: [navid.me](https://navid.me?utm_source=github&utm_medium=referral&utm_campaign=thrivecart-mcp-cli&utm_content=readme)
+- Link in bio: [navid.bio](https://navid.bio?utm_source=github&utm_medium=referral&utm_campaign=thrivecart-mcp-cli&utm_content=readme)
+- Navid Media: [navid.media](https://navid.media?utm_source=github&utm_medium=referral&utm_campaign=thrivecart-mcp-cli&utm_content=readme)
 - YouTube: [@thenavidm](https://youtube.com/@thenavidm?sub_confirmation=1) and [@thenavidai](https://youtube.com/@thenavidai?sub_confirmation=1)
 - X: [@thenavidm](https://x.com/thenavidm)
 - Instagram: [@thenavidm](https://instagram.com/thenavidm)
@@ -690,4 +690,4 @@ Not affiliated with, endorsed by, or connected to ThriveCart LLC.
 
 ---
 
-© 2026 [NM Media](https://navid.media?utm_source=github&utm_medium=readme&utm_campaign=thrivecart-mcp-cli). Made with ❤️ by [Navid Moazzez](https://navid.me?utm_source=github&utm_medium=readme&utm_campaign=thrivecart-mcp-cli).
+© 2026 [NM Media](https://navid.media?utm_source=github&utm_medium=referral&utm_campaign=thrivecart-mcp-cli&utm_content=readme). Made with ❤️ by [Navid Moazzez](https://navid.me?utm_source=github&utm_medium=referral&utm_campaign=thrivecart-mcp-cli&utm_content=readme).
