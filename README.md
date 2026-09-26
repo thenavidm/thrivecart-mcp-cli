@@ -8,7 +8,7 @@
 [![X](https://img.shields.io/badge/X-@thenavidm-black?logo=x)](https://x.com/thenavidm)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-thenavidm-0A66C2?logo=linkedin&logoColor=white)](https://linkedin.com/in/thenavidm)
 
-ThriveCart MCP server and CLI for Claude Code and AI agents. 24 tools for products, offers, transactions, revenue, customers, subscriptions and affiliates, across several carts at once.
+ThriveCart MCP server and CLI for Claude Code, Codex and AI agents. 24 tools for products, offers, transactions, revenue, customers, subscriptions and affiliates, across several carts at once.
 
 One install gives you both surfaces, the same 24 tools under the same names,
 reading one array of tool definitions so they cannot drift apart.
@@ -561,6 +561,20 @@ Nothing is stored. No database, no cache, no telemetry. The key lives in your cl
 | A script cannot tell a typo from an outage | Branch on the exit code, not the message. [Section 6](#6-output-and-exit-codes-) has the table |
 
 ## 13. FAQ ❓
+
+<details>
+<summary><b>What is the CLI?</b></summary>
+
+`thrivecart-cli` is the same program as the MCP server, run as commands. AI agents that run commands, like Claude Code, Codex and OpenCode, use it on their own, and you can type the same commands in a terminal, a script or a cron job. Every tool is a command with dashes, so `list_products` runs as `thrivecart-cli list-products`.
+
+</details>
+
+<details>
+<summary><b>Should I use the MCP server or the CLI?</b></summary>
+
+Use the MCP server in an app with no terminal, like Claude Desktop's chat. Use the CLI anywhere commands run: an agent like Claude Code, Codex or OpenCode, a script or a cron job. The MCP server sends its full tool list to the model on every turn, and the CLI costs nothing until it runs.
+
+</details>
 
 <details>
 <summary>Does this work with more than one ThriveCart account?</summary>
