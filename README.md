@@ -101,7 +101,7 @@ can do, the other can.
 | 4 | [Connect your client](#4-connect-your-client-) | Claude, Cursor, Windsurf, the rest |
 | 5 | [Check it worked](#5-check-it-worked-) | And the two things that fail |
 | 6 | [Output and exit codes](#6-output-and-exit-codes-) | What a script branches on |
-| 7 | [Which surface, and what each costs](#7-which-surface-and-what-each-costs) | Measured tokens per turn |
+| 7 | [Which surface, and what each costs](#7-which-surface-and-what-each-costs) | Measured in Claude Code, and how to spend less |
 | 8 | [Tools](#8-tools-) | All 24, grouped by what they reach |
 | 9 | [Several carts](#9-several-carts-) | The multi-account model |
 | 10 | [Writing safely](#10-writing-safely-) | What is irreversible, and what guards it |
@@ -325,53 +325,40 @@ esac
 
 ## 7. Which surface, and what each costs
 
-Both surfaces carry the same 24 tools. They differ in when you pay for them.
+Both surfaces are the same program with the same 24 tools. The
+difference is when the model pays for them. Measured in Claude Code:
 
-Measured on this release with a real `initialize` + `tools/list` handshake
-against `thrivecart-mcp`, counting the tokens in the tool list the server
-actually returns:
-
-| Question | MCP server | CLI |
+| | MCP server | CLI |
 |---|---|---|
-| Loaded every turn | **~5,100 tokens** | nothing |
-| Loaded when ThriveCart comes up | nothing more | ~280, once, to list the commands |
-| Works on claude.ai and mobile | yes | no, there is no shell there |
-| Works in a script, cron or CI | no | yes |
-| You invoke it by | asking in plain language | typing a command |
+| Every message, with every tool loaded | 8,100 tokens | nothing |
+| Every message, Claude Code's default | 910 tokens | nothing |
+| When ThriveCart comes up | nothing more, or the tools it picks | 3,800 tokens for `SKILL.md`, once |
+| 20 messages with ThriveCart in 1, every tool loaded | 162,000 tokens | 3,800 tokens |
 
-An MCP server sends its whole tool list to the model on **every turn**, whether
-you mention ThriveCart or not. That is the price of being connected at all,
-before you ask anything. It is not unusual, and almost nobody publishes it.
+Claude Code's [tool search](https://code.claude.com/docs/en/mcp#scale-with-mcp-tool-search)
+is on by default: it sends only the tool names and the server instructions,
+and loads a tool's full definition when the model reaches for it. An app that
+loads every tool up front pays the first line on every message, whether
+ThriveCart comes up or not. With the skill added, Claude Code also lists its
+one-line description, about 180 tokens.
 
-Over twenty turns where ThriveCart comes up once, that is roughly 102,000
-tokens against 280. When the whole conversation is about your carts, the gap
-closes and the server is the better experience, because you ask in plain
-language instead of remembering flags.
+Where the tokens go, with every tool loaded:
 
-### Where the 5,100 goes
-
-Worth knowing, because most of it is not something anyone can write away:
-
-| What the tokens are | Share |
+| Part of the tool list | Share |
 |---|---|
-| JSON Schema structure: types, required lists, nesting | **53%** |
+| JSON Schema structure: types, required lists, nesting | 53% |
 | Argument descriptions | 25% |
 | Tool descriptions | 22% |
 
-Over half is the protocol serialising every tool as JSON Schema. Any MCP server
-with this many tools pays the same. The 47% that is prose is what lets a model
-call `get_transactions` correctly without guessing.
+To spend less, turn the server off when you are not using it, which in Claude
+Code is the `/mcp` panel. `THRIVECART_READ_ONLY=1` takes the 5 write tools off the list, leaving 19.
+Or install the CLI and add the server on the days it earns its place.
 
-### Spending less
-
-**Turn the server off when you are not using ThriveCart.** In Claude Code that
-is `/mcp` to manage it, and every client has an equivalent.
-`THRIVECART_READ_ONLY=1` drops it to the 19 reading tools, measured at ~3,900
-tokens.
-
-**Or install the CLI and skip the server.** All 24 tools stay reachable, the
-standing cost falls to nothing, and you connect the server later on the days it
-earns its place.
+Measured on 2026-09-27 with Claude Code 2.1.257 on Claude Opus 5: one
+short prompt with and without the server connected, once with
+`ENABLE_TOOL_SEARCH=false` and once with the default, the difference read
+from the API's own usage figures. `SKILL.md` was measured the same way. Other
+apps and models count tokens a little differently.
 
 ## 8. Tools 🧰
 
@@ -572,7 +559,7 @@ Nothing is stored. No database, no cache, no telemetry. The key lives in your cl
 <details>
 <summary><b>Should I use the MCP server or the CLI?</b></summary>
 
-Use the MCP server in an app with no terminal, like Claude Desktop's chat. Use the CLI anywhere commands run: an agent like Claude Code, Codex or OpenCode, a script or a cron job. The MCP server sends its full tool list to the model on every turn, and the CLI costs nothing until it runs.
+Use the MCP server in an app with no terminal, like Claude Desktop's chat. Use the CLI anywhere commands run: an agent like Claude Code, Codex or OpenCode, a script or a cron job. The MCP server's tools take up context on every message, and the CLI costs nothing until it runs.
 
 </details>
 
