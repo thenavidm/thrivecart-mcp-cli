@@ -1,5 +1,10 @@
 # Versions
 
+## 2.2.3, 2026-10-04
+
+- **`npx -y @thenavidm/thrivecart-mcp-cli` starts the MCP server whatever order npm keeps.** npx starts whichever binary the npm registry lists first when they share one file, and the registry does not keep the published order. For this package that happened to be the server; for 23 others it was the CLI. A third binary named after the package, on its own file, now always starts the server, and npx picks it by name.
+- **`--port 8790` works, not only `--port=8790`.** The space form fell through to the default port without a word. A bare `--port`, `--portable` or a port that is not a positive number now falls back to `THRIVECART_HTTP_PORT`, then 8788, and the flag beats the environment variable.
+
 ## 2.2.2
 
 One dead link. The "you need a ThriveCart account" row pointed at a redirect on navid.me that was never set up and answered 404, which is a bad first impression on the one line telling somebody where to sign up. It points at thrivecart.com now. Every other link in every document was checked the same way.
