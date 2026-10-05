@@ -1,54 +1,26 @@
 /**
- * Shared plumbing every tool uses.
+ * Shared plumbing every tool uses, now on Slipway.
  *
- * Registering twenty-two tools by hand is twenty-two chances to forget an
- * annotation, leak a stack trace, or return a shape the model cannot read.
- * This wraps all of it once so a tool module only describes what it does.
+ * Tool modules keep describing themselves with a Zod shape, a risk and a
+ * handler. This adapter turns each into a Slipway tool, so the MCP server, the
+ * CLI, the write guard, annotations and errors all come from the framework
+ * instead of a copy kept in this repo.
  */
 
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z, type ZodRawShape } from "zod";
+import { SlipwayError, toSlipwayError, toolkit, z, type Risk, type Tool } from "@thenavidm/slipway";
 import type { ThriveCartClient } from "../api/client.js";
-import { ThriveCartError } from "../api/errors.js";
 import type { Account, Config } from "../config.js";
 import { selectAccount } from "../config.js";
-import { annotationsFor, type Risk, type WriteGuard } from "../safety.js";
+import { ThriveCartError } from "../api/errors.js";
 
 export type ToolContext = {
   client: ThriveCartClient;
   config: Config;
-  guard: WriteGuard;
   /** Resolve which cart this call reads or acts on. */
   account: (hint?: string) => Account;
 };
 
-export type ToolResult = {
-  content: { type: "text"; text: string }[];
-  isError?: boolean;
-};
-
-export function ok(data: unknown): ToolResult {
-  const text = typeof data === "string" ? data : JSON.stringify(data, null, 2);
-  return { content: [{ type: "text", text }] };
-}
-
-/**
- * Errors come back as a normal result with `isError`, not a thrown exception.
- *
- * A thrown MCP error reaches the model as a protocol failure with no structure.
- * A result it can read tells it what went wrong and usually how to fix it,
- * which is the difference between a correct retry and a give-up.
- */
-export function fail(error: unknown): ToolResult {
-  const payload =
-    error instanceof ThriveCartError
-      ? error.toJSON()
-      : { error: (error as Error)?.message ?? String(error) };
-  return {
-    content: [{ type: "text", text: JSON.stringify(payload, null, 2) }],
-    isError: true,
-  };
-}
+const kit = toolkit<ToolContext>();
 
 /** The optional argument that picks a cart, on every tool. */
 export const accountArg = {
@@ -57,16 +29,6 @@ export const accountArg = {
     .optional()
     .describe(
       "Which configured ThriveCart account to use, by name (for example 'navid-media'). Defaults to the first configured account. Call list_accounts to see them. Figures from one cart never include another.",
-    ),
-};
-
-/** The confirmation argument required by every irreversible tool. */
-export const confirmArg = {
-  confirm: z
-    .boolean()
-    .optional()
-    .describe(
-      "Must be true for this to run. This moves money or ends a customer's access and cannot be undone, so it is refused without an explicit confirmation.",
     ),
 };
 
@@ -82,7 +44,7 @@ export const pageArgs = {
     .describe("How many to return per page, 1-100. Defaults to 25."),
 };
 
-export type ToolSpec<S extends ZodRawShape> = {
+export type ToolSpec<S extends Shape> = {
   name: string;
   /** One line, imperative. Shown in tool pickers. */
   title: string;
@@ -96,70 +58,15 @@ export type ToolSpec<S extends ZodRawShape> = {
   summary?: (args: z.infer<z.ZodObject<S>>) => string;
 };
 
-export function defineTool<S extends ZodRawShape>(spec: ToolSpec<S>): ToolSpec<S> {
-  return spec;
-}
-
-/**
- * A tool of any shape, for the one place tools are held together in a list.
- *
- * `ToolSpec` is generic over its schema, so a list of tools with different
- * schemas has no single type: each handler takes a different argument shape and
- * function parameters are contravariant. The type safety that matters lives
- * inside each `defineTool` call, where schema and handler are checked against
- * each other. This only loosens the seam where they are collected.
- */
-export type AnyToolSpec = Omit<ToolSpec<ZodRawShape>, "handler" | "summary"> & {
-  handler: (args: never, ctx: ToolContext) => Promise<unknown>;
-  summary?: (args: never) => string;
-};
-
-/** Register one tool against the server, with guarding and error handling applied. */
-export function register(
-  server: McpServer,
-  contextFor: (extra: unknown) => ToolContext,
-  spec: AnyToolSpec,
-): void {
-  server.registerTool(
-    spec.name,
-    {
-      title: spec.title,
-      description: spec.description,
-      inputSchema: spec.schema,
-      annotations: {
-        title: spec.title,
-        ...annotationsFor(spec.risk, { idempotent: spec.idempotent }),
-      },
-    },
-    // The SDK derives its callback type from the schema generic. This wrapper is
-    // generic over the same shape, but TypeScript cannot prove the two are equal
-    // through the indirection, so the cast lives at this single boundary rather
-    // than in every tool definition.
-    (async (args: Record<string, unknown>, extra: unknown) => {
-      try {
-        const ctx = contextFor(extra);
-        if (spec.risk !== "read") {
-          const summary = spec.summary?.(args as never) ?? spec.name;
-          const confirm = (args as { confirm?: boolean }).confirm;
-          ctx.guard.check(spec.name, spec.risk, confirm, summary);
-        }
-        return ok(await spec.handler(args as never, ctx));
-      } catch (error) {
-        return fail(error);
-      }
-    }) as never,
-  );
-}
+export type AnyToolSpec = Tool<ToolContext>;
 
 export function makeContext(
   client: ThriveCartClient,
   config: Config,
-  guard: WriteGuard,
 ): ToolContext {
   return {
     client,
     config,
-    guard,
     account: (hint?: string) => selectAccount(config, hint),
   };
 }
@@ -168,4 +75,56 @@ export function makeContext(
 export function clamp(value: number | undefined, fallback: number, max = 100): number {
   if (value === undefined || !Number.isFinite(value)) return fallback;
   return Math.min(Math.max(Math.trunc(value), 1), max);
+}
+
+/**
+ * Kept so tool modules read the same, but never sent: Slipway adds `confirm`
+ * to every irreversible tool itself, with one description everywhere.
+ */
+export const confirmArg = {
+  confirm: z.boolean().optional(),
+};
+
+type Shape = Record<string, z.ZodType>;
+
+/**
+ * Slipway reads the status (or, without one, the words) to pick the exit code
+ * and the error code. What else the error knew, such as the endpoint, rides
+ * along in `details` for the model to read.
+ */
+export function toSlipway(error: ThriveCartError): SlipwayError {
+  const known = toSlipwayError(error);
+  const json = typeof (error as { toJSON?: () => unknown }).toJSON === "function" ? ((error as { toJSON: () => Record<string, unknown> }).toJSON()) : {};
+  const { error: _message, type: _type, status: _status, retry_after_seconds: retryAfter, ...rest } = json as Record<string, unknown>;
+  const details = Object.fromEntries(Object.entries(rest).filter(([, value]) => value !== undefined && value !== ""));
+  return new SlipwayError(known.message, known.code, known.exitCode, {
+    ...(known.hint ? { hint: known.hint } : {}),
+    ...(known.status !== undefined ? { status: known.status } : {}),
+    ...(typeof retryAfter === "number" ? { retryAfterSeconds: retryAfter } : known.retryAfterSeconds !== undefined ? { retryAfterSeconds: known.retryAfterSeconds } : {}),
+    ...(Object.keys(details).length ? { details } : {}),
+    cause: error,
+  });
+}
+
+export function defineTool<S extends Shape>(spec: ToolSpec<S>): Tool<ToolContext> {
+  const { confirm: _confirm, ...shape } = spec.schema as Shape;
+  const handler = spec.handler as (args: Record<string, unknown>, ctx: ToolContext) => Promise<unknown>;
+  return kit.defineTool({
+    name: spec.name,
+    title: spec.title,
+    description: spec.description,
+    input: z.object(shape),
+    risk: spec.risk,
+    // 2.2's confirmation said this, and it is truer of a refund than "is public".
+    ...(spec.risk === "destructive" ? { consequence: "moves money or ends a customer's access and cannot be undone" } : {}),
+    ...(spec.idempotent !== undefined ? { idempotent: spec.idempotent } : {}),
+    ...(spec.summary ? { summary: spec.summary as (args: Record<string, unknown>) => string } : {}),
+    handler: async (args, ctx) => {
+      try {
+        return await handler(args, ctx);
+      } catch (error) {
+        throw error instanceof ThriveCartError ? toSlipway(error) : error;
+      }
+    },
+  });
 }

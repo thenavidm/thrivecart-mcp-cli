@@ -17,22 +17,22 @@ printf '%s\n%s\n' \
   | THRIVECART_API_KEY=x node dist/index.js
 ```
 
-24 tools, 19 of them with `THRIVECART_READ_ONLY=1`. If either number changes, update it in `README.md`, the `package.json` description, `desktop-extension/manifest.json`, and `.github/workflows/ci.yml`, which asserts both. Read the count off the `commands (N)` header that `thrivecart-cli` prints; counting the listing lines with `grep -c` includes the header and gives one too many.
+24 tools, 19 of them with `THRIVECART_READ_ONLY=1`. If either number changes, update it in `README.md`, the `package.json` description, `desktop-extension/manifest.json`, and `.github/workflows/ci.yml`, which asserts both. Read the count off the `thrivecart-cli 3.0.0: N commands` header that `thrivecart-cli` prints; counting the listing lines with `grep -c` includes the header and gives one too many.
 
 ## Layout
 
 | Path | Holds |
 |---|---|
+| `src/app.ts` | The Slipway app: tools, settings, doctor. Slipway serves MCP, the CLI and `--http`, and owns the write guard and the audit log |
+| `src/guide.ts` | Server instructions, resources and prompts |
+| `src/doctor.ts` | Per-cart checks: the base URL, the key, a second cart sharing the first one's key |
 | `src/config.ts` | Credentials and the multi-account model |
-| `src/safety.ts` | Whether a write is allowed to happen |
 | `src/api/` | HTTP client and typed errors |
-| `src/format/` | Normalising ThriveCart's inconsistent fields |
-| `src/tools/` | One module per group; `kit.ts` is the shared plumbing |
-| `src/transport/http.ts` | The `--http` server |
-| `src/cli.ts` | The shell surface, generated from `ALL_TOOLS` |
+| `src/format/` | Normalizing ThriveCart's inconsistent fields |
+| `src/tools/` | One module per group; `kit.ts` adapts them to Slipway and keeps each error's endpoint and cart |
 | `desktop-extension/` | The `.mcpb` for Claude Desktop; `build.sh` vendors `node_modules` |
 
-A new tool goes in the matching `src/tools/` module via `defineTool`, then into `ALL_TOOLS`. `kit.ts` handles annotations, guarding and error shaping, so do not hand-roll those.
+A new tool goes in the matching `src/tools/` module via `defineTool`, then into `ALL_TOOLS`. Slipway handles annotations, guarding and error shaping, so do not hand-roll those.
 
 ## Things that are decided
 
@@ -40,8 +40,8 @@ A new tool goes in the matching `src/tools/` module via `defineTool`, then into 
 - **Never filter transactions by `product_id`.** ThriveCart documents no product filter on `/transactions`; the parameters are `page`, `perPage`, `query`, `transactionType` and `currency`. Filter on `item_name`, here, after fetching.
 - **Money is integer cents.** Never accumulate floats. `src/format/transactions.ts` owns this.
 - **Field names vary.** `amount`/`total`, `date`/`created_at`, `item_name`/`product_name`. Read them through `format/transactions.ts`, never inline.
-- **Only `cancel_subscription` and `refund_transaction` are `destructive`.** Pausing is reversible. Do not add `confirm` to reversible tools; it trains the reflex the guard exists to prevent.
-- **Errors are returned, not thrown.** A thrown MCP error reaches the model as a protocol failure with no structure.
+- **Only `cancel_subscription` and `refund_transaction` are `destructive`.** Over MCP a person approves each; `confirm: true` counts only where the client cannot ask. Pausing is reversible. Do not make reversible tools need approval; it trains the reflex the guard exists to prevent.
+- **Every anticipated failure is a `ThriveCartError` subclass** from `api/errors.ts`. Slipway turns its status into the exit code and a structured result the model can act on, and `kit.ts` keeps the endpoint and the cart in `details`. A plain `Error` keeps its message but exits 1, unexpected, unless its words match a known failure.
 
 ## House rules
 

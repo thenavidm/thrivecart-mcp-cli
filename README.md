@@ -1,4 +1,4 @@
-<img src="https://cdn.navid.media/connectors/thrivecart-icon.png" alt="ThriveCart" width="88">
+<img src="https://cdn.navid.me/connectors/thrivecart-icon.png" alt="ThriveCart" width="88">
 
 # ThriveCart MCP Server & CLI
 
@@ -17,7 +17,7 @@ ThriveCart holds your products, orders, customers, subscriptions and affiliates.
 
 This connects it to your AI assistant, with the multi-account problem solved. A ThriveCart API key reaches exactly one account, so running more than one cart means more than one key, and figures from one silently passing as the whole business is the mistake worth designing against.
 
-Built and maintained by [Navid Moazzez](https://navid.me?utm_source=github&utm_medium=referral&utm_campaign=thrivecart-mcp-cli&utm_content=readme).
+Built and maintained by [Navid Moazzez](https://navid.me?utm_source=github&utm_medium=referral&utm_campaign=thrivecart-mcp-cli&utm_content=readme). Built on [Slipway](https://github.com/thenavidm/slipway), which turns one definition of each tool into the MCP server and the CLI.
 
 ```
 You: revenue by product last quarter, both carts, separately
@@ -65,7 +65,7 @@ whichever you pick.
 receives for that tool, which is how you can check the two surfaces really are
 one thing.
 
-### MCP server, for AI agents
+### MCP server, for your AI app
 
 `thrivecart-mcp` is what Claude Code, Claude Desktop, Cursor and the rest
 launch. You never run it by hand:
@@ -78,7 +78,7 @@ claude mcp add thrivecart \
 
 Then just ask: _"how much of last quarter's revenue came from bumps rather than the main products?"_
 
-Every other client is in [section 4](#4-connect-your-client-).
+Every other client is in [section 4](#4-connect-your-client-). Each refund and cancellation waits for your approval in the client, as [section 10](#10-writing-safely-) explains.
 
 ### Which one
 
@@ -91,7 +91,31 @@ Every other client is in [section 4](#4-connect-your-client-).
 They are the same program reading the same tool definitions, so anything one
 can do, the other can.
 
-## Contents 📑
+## Features
+
+Every tool is both a command and an MCP tool, with the same name. The command
+is the tool name with dashes.
+
+| Capability | CLI command | MCP tool |
+|---|---|---|
+| Which cart this key belongs to | `thrivecart-cli whoami` | `whoami` |
+| List configured carts | `thrivecart-cli list-accounts` | `list_accounts` |
+| Products and their pricing | `thrivecart-cli list-products` / `get-product` / `get-product-pricing` | `list_products` / `get_product` / `get_product_pricing` |
+| Bumps | `thrivecart-cli list-bumps` / `get-bump` / `get-bump-pricing` | `list_bumps` / `get_bump` / `get_bump_pricing` |
+| Upsells | `thrivecart-cli list-upsells` / `get-upsell` / `get-upsell-pricing` | `list_upsells` / `get_upsell` / `get_upsell_pricing` |
+| Downsells | `thrivecart-cli list-downsells` / `get-downsell` / `get-downsell-pricing` | `list_downsells` / `get_downsell` / `get_downsell_pricing` |
+| Transactions | `thrivecart-cli get-transactions` | `get_transactions` |
+| Revenue for a period | `thrivecart-cli get-revenue-summary` | `get_revenue_summary` |
+| A customer and their history | `thrivecart-cli get-customer` | `get_customer` |
+| Pause and resume a subscription | `thrivecart-cli pause-subscription` / `resume-subscription` | `pause_subscription` / `resume_subscription` |
+| Cancel a subscription | `thrivecart-cli cancel-subscription` | `cancel_subscription` |
+| Refund a transaction | `thrivecart-cli refund-transaction` | `refund_transaction` |
+| Affiliates | `thrivecart-cli search-affiliates` / `get-affiliate` / `create-affiliate` | `search_affiliates` / `get_affiliate` / `create_affiliate` |
+| Check your setup | `thrivecart-cli doctor` | not a tool |
+
+All 24 with their arguments are in [section 8](#8-tools-).
+
+## Contents
 
 | # | Section | What is in it |
 |---|---|---|
@@ -124,7 +148,7 @@ The last one is the point. Configure several carts and every tool takes an `acco
 
 ## 2. Quick install ⚡
 
-Node 20 or newer. Nothing else.
+Node 22 or newer. Nothing else.
 
 ```bash
 npx -y @thenavidm/thrivecart-mcp-cli@latest --version
@@ -138,7 +162,7 @@ Installing the package needs no account. Only connecting it does, which is the n
 
 | You need | Check with | If missing |
 |---|---|---|
-| Node 20 or newer | `node -v` | [nodejs.org](https://nodejs.org) |
+| Node 22 or newer | `node -v` | [nodejs.org](https://nodejs.org) |
 | A ThriveCart account | Open your ThriveCart dashboard | [thrivecart.com](https://thrivecart.com) |
 | An API key | Settings → API & Webhooks | See [section 3](#3-setup-) |
 
@@ -228,10 +252,13 @@ Zed, Cline, Continue and any other MCP client over stdio all work. They each wan
 
 ### Docker
 
+No image is published, so build it from this repository:
+
 ```bash
+docker build -t thrivecart-mcp-cli .
 docker run -i --rm \
   -e THRIVECART_API_KEY=your-api-key \
-  ghcr.io/thenavidm/thrivecart-mcp-cli:latest
+  thrivecart-mcp-cli
 ```
 
 ### Self-hosted over HTTP
@@ -240,7 +267,7 @@ docker run -i --rm \
 thrivecart-mcp --http --port=8788
 ```
 
-Binds `127.0.0.1` by default. An API key can refund money, so set `THRIVECART_HTTP_TOKEN` before you ever set `THRIVECART_HTTP_HOST=0.0.0.0`.
+Binds `127.0.0.1` by default, and will not start on any other address without `THRIVECART_HTTP_TOKEN`, because an API key can refund money. `GET /health` returns the name, version and tool count without authentication.
 
 ## 5. Check it worked 🩺
 
@@ -251,25 +278,32 @@ THRIVECART_API_KEY=your-api-key npx -y @thenavidm/thrivecart-mcp-cli@latest doct
 `doctor` is reachable from either binary, so `thrivecart-cli doctor` works the same way. It checks each cart separately and reports the fix, not the status code:
 
 ```
-thrivecart-mcp 2.2.1
+ThriveCart doctor
 
-  ok   2 accounts configured: navid-media, students
-  ok   navid-media: key valid (navid #3014)
-  ok   navid-media: products readable (61)
-  ok   students: key valid (students #4180)
-  ok   students: products readable (3)
+  ✓ Node.js               v22.23.1
+  ✓ Version               thrivecart 3.0.0
+  ✓ Writes                on
+  ✓ Tools                 24 of 24 on
+  ✓ Credentials           configured
+  ✓ Carts                 2 configured: navid-media, students
+  ✓ navid-media key       valid (navid #3014)
+  ✓ navid-media products  readable (61)
+  ✓ students key          valid (students #4180)
+  ✓ students products     readable (3)
+
+  Ready.
 ```
 
 The name and number in brackets come from ThriveCart itself, so a name you chose
 that points at the wrong cart is visible rather than assumed. Exit code 0 means
-every line said ok.
+every line passed, and 10 that nothing is configured yet.
 
 The two failures people actually hit:
 
 | Symptom | Cause |
 |---|---|
 | `key rejected` | The account password was pasted instead of an API token from Settings → API & webhooks → API tokens |
-| `navid-media and students are the same cart` | The second cart was configured with the first cart's key. Left alone, this double-counts revenue |
+| `navid-media and students: Both keys resolve to ThriveCart account …` | The second cart was configured with the first cart's key. Left alone, this double-counts revenue |
 
 ## 6. Output and exit codes 🔢
 
@@ -283,14 +317,16 @@ Everything a script needs to branch on.
 | `--json` | JSON, always, whichever kind of command it was |
 | `--compact` | the same JSON on one line |
 | `--select a,b.c` | only the fields you name; dotted paths descend into objects and arrays |
-| `--agent` | all of the above at once: JSON, compact, no prompts, no colour |
+| `--agent` | all of the above at once: JSON, compact, no prompts, no color, and it never confirms a write |
 
 Results go to stdout. Errors go to stderr, always as JSON, so one parse handles
 both outcomes:
 
 ```json
 {
-  "error": "refund_transaction moves money or ends a customer's access and cannot be undone, so it will not run without --confirm."
+  "error": "refund_transaction moves money or ends a customer's access and cannot be undone, so it will not run without --confirm. About to: REFUND transaction 9999, moving real money back to the customer. Call again with --confirm if that is what was asked for.",
+  "code": "refused",
+  "hint": "Pass --confirm only when the user asked for this exact action."
 }
 ```
 
@@ -302,11 +338,11 @@ returns that status, not read off the source.
 | Code | Means | How to get it |
 |---|---|---|
 | `0` | it worked | any successful command |
-| `1` | unknown command, or a tool hidden by `THRIVECART_READ_ONLY=1` | `thrivecart-cli get-porduct` |
-| `2` | you typed it wrong, or the write was refused | a missing required flag, an unknown option, or `refund-transaction` without `--confirm` |
+| `1` | an unexpected error | a bug in this server, worth an issue |
+| `2` | you typed it wrong, or the write was refused | a missing required flag, an unknown option or command such as `thrivecart-cli get-porduct`, a tool hidden by `THRIVECART_READ_ONLY=1`, or `refund-transaction` without `--confirm` |
 | `3` | not found | the API answered 404 |
 | `4` | the key was rejected | the API answered 401 or 403 |
-| `5` | the API failed | the API answered 5xx |
+| `5` | the API failed | the API answered 5xx, or never answered |
 | `7` | rate limited | the API answered 429 |
 | `10` | nothing is configured | no `THRIVECART_API_KEY` and no `THRIVECART_ACCOUNTS` |
 
@@ -319,7 +355,8 @@ case $? in
   0)  echo "refunded" ;;
   2|10) echo "my mistake, not retrying" >&2; exit 1 ;;
   4)  echo "token rejected, check Settings > API & webhooks" >&2; exit 1 ;;
-  *)  echo "failed, will retry" >&2 ;;
+  5|7) echo "ThriveCart failed or is busy, will retry" >&2 ;;
+  *)  echo "unexpected, see the error" >&2; exit 1 ;;
 esac
 ```
 
@@ -328,12 +365,12 @@ esac
 Both surfaces are the same program with the same 24 tools. The
 difference is when the model pays for them. Measured in Claude Code:
 
-| | MCP server | CLI |
+| Cost | MCP server | CLI |
 |---|---|---|
-| Every message, with every tool loaded | 8,100 tokens | nothing |
+| Every message, with every tool loaded | 7,230 tokens | nothing |
 | Every message, Claude Code's default | 910 tokens | nothing |
 | When ThriveCart comes up | nothing more, or the tools it picks | 3,800 tokens for `SKILL.md`, once |
-| 20 messages with ThriveCart in 1, every tool loaded | 162,000 tokens | 3,800 tokens |
+| 20 messages with ThriveCart in 1, every tool loaded | 145,000 tokens | 3,800 tokens |
 
 Claude Code's [tool search](https://code.claude.com/docs/en/mcp#scale-with-mcp-tool-search)
 is on by default: it sends only the tool names and the server instructions,
@@ -346,19 +383,30 @@ Where the tokens go, with every tool loaded:
 
 | Part of the tool list | Share |
 |---|---|
-| JSON Schema structure: types, required lists, nesting | 53% |
+| JSON Schema structure: types, required lists, nesting | 52% |
 | Argument descriptions | 25% |
-| Tool descriptions | 22% |
+| Tool descriptions | 23% |
 
 To spend less, turn the server off when you are not using it, which in Claude
 Code is the `/mcp` panel. `THRIVECART_READ_ONLY=1` takes the 5 write tools off the list, leaving 19.
 Or install the CLI and add the server on the days it earns its place.
 
-Measured on 2026-09-27 with Claude Code 2.1.257 on Claude Opus 5: one
+Measured on 2026-10-05 with Claude Code 2.1.286 on Claude Opus 5.5: one
 short prompt with and without the server connected, once with
 `ENABLE_TOOL_SEARCH=false` and once with the default, the difference read
-from the API's own usage figures. `SKILL.md` was measured the same way. Other
-apps and models count tokens a little differently.
+from the API's own usage figures. `SKILL.md` was measured the same way, and the
+shares were counted with OpenAI's o200k tokenizer. Other apps and models count
+tokens a little differently.
+
+Against 2.2.3, measured the same day: every tool loaded costs 7,226 tokens
+instead of 8,087, tool search the same, and `SKILL.md` 49 more for the approval
+rule, `which` and the full exit codes. In Codex 0.159.3 on gpt-6.1-sol, the
+same task, "find the command that pauses a subscription without cancelling it
+and the flags it requires", read a median of 83,647 input tokens on 3.0.0
+against 127,587 on 2.2.3 over the CLI (five runs each): 2.2.3's `--help` did not
+list the commands, so the model guessed one and read the full list, where
+3.0.0's pointed it to `which`. Over MCP it read 48,090 against 48,069, where the
+21 are the standard `confirm` wording.
 
 ## 8. Tools 🧰
 
@@ -482,14 +530,21 @@ what is about to happen before you decide:
 $ thrivecart-cli refund-transaction --order-id 9999
 {
   "error": "refund_transaction moves money or ends a customer's access and cannot be undone, so it will not run without --confirm. About to: REFUND transaction 9999, moving real money back to the customer. Call again with --confirm if that is what was asked for.",
-  "type": "WriteBlockedError"
+  "code": "refused",
+  "hint": "Pass --confirm only when the user asked for this exact action."
 }
 $ echo $?
 2
 ```
 
-In an MCP client the same guard reads `confirm: true` instead, because that is
-what the model would be typing. `pause_subscription` is undone by
+`--agent` never adds `--confirm`. Over MCP a person approves each refund and
+cancellation where the client can ask: Claude Code (2.1.246 and later) shows its
+own prompt, and a client that can show forms asks with an approval form whose one
+box starts unticked. Each approval is signed, bound to that exact call and works
+once. Where a client can do neither, the model's `confirm: true` counts, and it
+should pass it only when you asked for that exact refund.
+`THRIVECART_CONFIRM=model` makes `confirm: true` enough everywhere, for an agent
+with no person to ask, such as a scheduled job. `pause_subscription` is undone by
 `resume_subscription`, so it is deliberately not guarded: confirming everything
 is how you train the reflex the guard exists to prevent.
 
@@ -519,7 +574,7 @@ machine.
 THRIVECART_AUDIT_LOG=~/thrivecart-writes.log
 ```
 
-One JSON line per attempted write, allowed or blocked, written `0600`. Both
+One JSON line per attempted write, allowed or blocked, with who approved it (`person`, `client` or `flag`), written `0600`. Both
 surfaces write to it, so a refund issued from a cron job is recorded the same
 way as one a model asked for.
 
@@ -544,10 +599,25 @@ Nothing is stored. No database, no cache, no telemetry. The key lives in your cl
 | Filtering by product returns wrong rows | ThriveCart documents no product filter on `/transactions`. Use `item_name`, which this server applies after fetching |
 | `npx` not found in Claude Desktop | Use the absolute path from `which npx` |
 | Truncation warning | It walked `THRIVECART_MAX_PAGES` and stopped. Narrow the range or raise it |
-| `thrivecart-cli: command not found` | The global npm bin directory is not on `$PATH`. Run `npm bin -g` and add it, or use `npx -y @thenavidm/thrivecart-mcp-cli@latest` |
+| `thrivecart-cli: command not found` | The global npm bin directory is not on `$PATH`. Add the `bin` folder under `npm prefix -g`, or use `npx -y @thenavidm/thrivecart-mcp-cli@latest` |
+| "will not run without --confirm" | Working as intended. See [section 10](#10-writing-safely-) |
+| Claude Code asks before every refund | Expected: refunding and cancelling wait for your approval |
+| `claude -p` will not refund | Headless Claude Code refuses tools that need a person. Give that agent `THRIVECART_CONFIRM=model` |
+| No approval form appears | The client cannot show forms, so the model's `confirm: true` counts, and only for a refund you asked for |
+| A piped request gets no answer | Stdin closed before the answer. The MCP stdio binding stops a server when its input ends; keep stdin open until you read the answer, or use the CLI |
 | A script cannot tell a typo from an outage | Branch on the exit code, not the message. [Section 6](#6-output-and-exit-codes-) has the table |
 
 ## 13. FAQ ❓
+
+<details>
+<summary><b>What is an MCP server?</b></summary>
+
+An MCP server is a standard way to give an AI assistant real access to a tool,
+so it can act rather than guess. You install it once, your assistant gains the
+tools, and it works in Claude, Cursor, ChatGPT and anything else that speaks the
+protocol. You never call the tools yourself, you ask in plain language.
+
+</details>
 
 <details>
 <summary><b>What is the CLI?</b></summary>
@@ -564,53 +634,95 @@ Use the MCP server in an app with no terminal, like Claude Desktop's chat. Use t
 </details>
 
 <details>
-<summary>Does this work with more than one ThriveCart account?</summary>
+<summary><b>Does this work with more than one ThriveCart account?</b></summary>
 
 Yes, and that is the main reason it exists. A ThriveCart API key reaches exactly one account, so several carts means several keys. Set `THRIVECART_ACCOUNTS` to a JSON array and pass `account` on any tool. Figures are never combined unless you ask. See [section 9](#9-several-carts-).
+
 </details>
 
 <details>
-<summary>Can it refund or cancel by accident?</summary>
+<summary><b>Can it refund or cancel by accident?</b></summary>
 
-Both refuse without `confirm: true`, and the refusal states the order id and what will happen. `THRIVECART_READ_ONLY=1` removes every write from the tool list entirely, so a model cannot call what it cannot see.
+Both wait for your approval: Claude Code shows its own prompt for each one, and a client that can show forms asks with one. Where a client can do neither, the model must pass `confirm: true`, and the refusal states the order id and what will happen. `THRIVECART_READ_ONLY=1` removes every write from the tool list entirely, so a model cannot call what it cannot see.
+
 </details>
 
 <details>
-<summary>Is my API key sent anywhere except ThriveCart?</summary>
+<summary><b>Is my API key sent anywhere except ThriveCart?</b></summary>
 
 No. It goes in an `Authorization: Bearer` header to `thrivecart.com` and nowhere else. Nothing is stored, cached or reported, and there is no telemetry. You can check: the only external host in the source is `thrivecart.com`.
+
 </details>
 
 <details>
-<summary>Why is get_revenue_summary slow?</summary>
+<summary><b>Why is get_revenue_summary slow?</b></summary>
 
 It walks every page of `/transactions` to total them, and ThriveCart rate limits to 60 requests per minute per account, so the server paces itself to stay under that. Give it a date range rather than asking for all time.
+
 </details>
 
 <details>
-<summary>Why is there no tool to list customers?</summary>
+<summary><b>Why is there no tool to list customers?</b></summary>
 
 Because ThriveCart has no endpoint for it. Their API exposes `POST /customer`, which looks one person up by email, and nothing that pages through everyone. `get_transactions` is the closest thing, since it returns buyers along with what they bought.
+
 </details>
 
 <details>
-<summary>Why does api.thrivecart.com not work?</summary>
+<summary><b>Why does api.thrivecart.com not work?</b></summary>
 
 It is not the API host. ThriveCart's API lives at `https://thrivecart.com/api/external`, which is what their own SDK uses. The `api.` subdomain is a common guess and fails in a way that looks like a bad key.
+
 </details>
 
 <details>
-<summary>What happens if I regenerate my API token?</summary>
+<summary><b>What happens if I regenerate my API token?</b></summary>
 
 Every client using the old one starts failing at once, because there is no refresh and no grace period. Paste the new token into your MCP client config and restart it. Run `doctor` to confirm.
+
+</details>
+
+<details>
+<summary><b>Does it cost anything?</b></summary>
+
+It costs nothing. The server is MIT licensed and the API comes with your
+ThriveCart account. ThriveCart allows 60 requests a minute per account, and the
+server paces itself to stay under that.
+
+</details>
+
+<details>
+<summary><b>Does it work with ChatGPT and Cursor, or only Claude?</b></summary>
+
+It works with any MCP client. Claude Code, Claude Desktop, Cursor, Windsurf, VS
+Code, Codex CLI and Gemini CLI all run it the same way.
+
+</details>
+
+<details>
+<summary><b>Can I let an agent read but never write?</b></summary>
+
+Set `THRIVECART_READ_ONLY=1`. The five write tools are never listed, so the
+model cannot see or call them, and the CLI refuses them too. That is the right
+setting for an agent you are not watching.
+
+</details>
+
+<details>
+<summary><b>How do I disconnect it?</b></summary>
+
+Delete or regenerate the API token in ThriveCart, under Settings, then API &
+webhooks, then API tokens, which cuts access at once. Then remove the server
+from your client's config.
+
 </details>
 
 ## Environment variables
 
 One is required. Everything else has a working default and exists so you can
-tighten or tune it. Every variable below is read by `src/config.ts` or
-`src/transport/http.ts`; a test asserts the list here and the one in
-`thrivecart-mcp --help` stay in step with the code.
+tighten or tune it. Every variable below is read by `src/config.ts` or by
+Slipway; a test asserts the list here and the one in
+`thrivecart-cli --help` stay in step with the code.
 
 **Credentials**
 
@@ -628,7 +740,8 @@ tighten or tune it. Every variable below is read by `src/config.ts` or
 |---|---|---|
 | `THRIVECART_READ_ONLY` | `0` | `1` hides all five write tools, leaving the 19 reading ones |
 | `THRIVECART_ALLOW_DESTRUCTIVE` | `1` | `0` keeps pause, resume and create affiliate, blocks refunding and cancelling |
-| `THRIVECART_AUDIT_LOG` | none | Path to an append-only log of every attempted write, allowed or blocked |
+| `THRIVECART_AUDIT_LOG` | none | Path to an append-only log of every attempted write, allowed or blocked, and who approved it |
+| `THRIVECART_CONFIRM` | `human` | `model` lets `confirm: true` alone approve over MCP, for an agent with no person to ask |
 
 **Tuning**
 
@@ -639,6 +752,9 @@ tighten or tune it. Every variable below is read by `src/config.ts` or
 | `THRIVECART_MAX_RETRIES` | `3` | Retries on rate limits and 5xx |
 | `THRIVECART_MAX_PAGES` | `100` | Ceiling when walking transactions, so a runaway range stops rather than paging forever |
 | `THRIVECART_USER_AGENT` | `thrivecart-mcp` | Sent on every request |
+| `THRIVECART_TOOL_TIMEOUT_MS` | none | Give up on any tool after this long |
+| `THRIVECART_SURFACE` | `full` | `search` lists three tools that find, describe and run the rest |
+| `THRIVECART_DEBUG` | `0` | `1` prints debug lines on stderr |
 
 **Serving over HTTP** (`--http`, read [SECURITY.md](SECURITY.md) before you use it)
 
@@ -646,7 +762,7 @@ tighten or tune it. Every variable below is read by `src/config.ts` or
 |---|---|---|
 | `THRIVECART_HTTP_PORT` | `8788` | Port to bind |
 | `THRIVECART_HTTP_HOST` | `127.0.0.1` | Interface to bind |
-| `THRIVECART_HTTP_TOKEN` | none | Bearer token. An API key can refund money, so set this before you ever bind beyond localhost |
+| `THRIVECART_HTTP_TOKEN` | none | Bearer token. An API key can refund money, so any address but localhost refuses to start without one |
 
 ## Versions
 
@@ -656,7 +772,7 @@ See [CHANGELOG.md](CHANGELOG.md).
 
 Run into a problem or have a question? [Open an issue](https://github.com/thenavidm/thrivecart-mcp-cli/issues) and I will help.
 
-## About the author 👋
+## About the author
 
 Navid Moazzez is a leading AI business strategist, and the host of the AI Creator Summit, watched by 100,000+ creators. He helps creators and founders master AI and build their own AI Operating System (AI OS) to automate their business and life. He creates useful free tools, MCP servers and CLIs that creators and founders can use in their own workflows.
 
@@ -672,18 +788,19 @@ Navid Moazzez is a leading AI business strategist, and the host of the AI Creato
 
 If this is useful, star the repo and come say hi on [X](https://x.com/thenavidm).
 
-## Dependencies 📦
+## Dependencies
 
 | Library | License | What it does |
 |---|---|---|
-| [MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk) | MIT | The MCP server and transports |
+| [Slipway](https://github.com/thenavidm/slipway) | Apache-2.0 | The MCP server and the CLI from one definition of each tool, with the write guard |
+| [MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk) | Apache-2.0 | The MCP protocol and transports, through Slipway |
 | [zod](https://github.com/colinhacks/zod) | MIT | Tool argument schemas and validation |
 
 ## Security 🛡️
 
 Found a vulnerability? [Report it privately](https://github.com/thenavidm/thrivecart-mcp-cli/security/advisories/new), not as a public issue. [SECURITY.md](SECURITY.md) covers what this server holds, the write-safety model, and running it over HTTP.
 
-## License ⚖️
+## License
 
 [MIT](./LICENSE). Free to use, modify, and share.
 

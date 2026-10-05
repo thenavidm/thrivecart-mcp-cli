@@ -10,7 +10,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        node: [20, 22]
+        node: [22, 24]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -39,10 +39,11 @@ jobs:
       - name: Server starts and lists every tool
         env:
           THRIVECART_API_KEY: ci-placeholder
+        # Stdin stays open while the request is answered: the MCP stdio binding stops a server whose input has ended.
         run: |
-          printf '%s\n%s\n' \
+          (printf '%s\n%s\n' \
             '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"ci","version":"1"}}}' \
-            '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' \
+            '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}'; sleep 5) \
             | node dist/index.js 2>/dev/null \
             | node -e '
               let raw = "";
@@ -73,10 +74,11 @@ jobs:
         env:
           THRIVECART_API_KEY: ci-placeholder
           THRIVECART_READ_ONLY: "1"
+        # Stdin stays open while the request is answered: the MCP stdio binding stops a server whose input has ended.
         run: |
-          printf '%s\n%s\n' \
+          (printf '%s\n%s\n' \
             '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"ci","version":"1"}}}' \
-            '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' \
+            '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}'; sleep 5) \
             | node dist/index.js 2>/dev/null \
             | node -e '
               let raw = "";
@@ -95,10 +97,11 @@ jobs:
       - name: A refund refuses without confirm
         env:
           THRIVECART_API_KEY: ci-placeholder
+        # Stdin stays open while the request is answered: the MCP stdio binding stops a server whose input has ended.
         run: |
-          printf '%s\n%s\n' \
+          (printf '%s\n%s\n' \
             '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"ci","version":"1"}}}' \
-            '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"refund_transaction","arguments":{"order_id":"1"}}}' \
+            '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"refund_transaction","arguments":{"order_id":"1"}}}'; sleep 5) \
             | node dist/index.js 2>/dev/null \
             | node -e '
               let raw = "";
@@ -117,10 +120,11 @@ jobs:
       - name: Several carts are addressable
         env:
           THRIVECART_ACCOUNTS: '[{"name":"one","api_key":"k1"},{"name":"two","api_key":"k2"}]'
+        # Stdin stays open while the request is answered: the MCP stdio binding stops a server whose input has ended.
         run: |
-          printf '%s\n%s\n' \
+          (printf '%s\n%s\n' \
             '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"ci","version":"1"}}}' \
-            '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"list_accounts","arguments":{}}}' \
+            '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"list_accounts","arguments":{}}}'; sleep 5) \
             | node dist/index.js 2>/dev/null \
             | node -e '
               let raw = "";

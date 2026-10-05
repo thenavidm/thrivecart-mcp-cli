@@ -16,16 +16,16 @@ Writes work by default, because a server where every write needs a flag teaches 
 
 | Control | Effect |
 |---|---|
-| `confirm: true` | Required by `cancel_subscription` and `refund_transaction`. Neither can be undone |
+| Approval | Required by `cancel_subscription` and `refund_transaction`, which cannot be undone. Over MCP a person approves each where the client can ask; elsewhere the model must pass `confirm: true`, and `THRIVECART_CONFIRM=model` allows that everywhere |
 | `THRIVECART_ALLOW_DESTRUCTIVE=0` | Those two refuse. Pause, resume and create_affiliate still work |
 | `THRIVECART_READ_ONLY=1` | All five write tools are removed from the tool list entirely |
-| `THRIVECART_AUDIT_LOG=<path>` | One JSON line per attempted write, allowed or blocked, written `0600` |
+| `THRIVECART_AUDIT_LOG=<path>` | One JSON line per attempted write, allowed or blocked, with who approved it, written `0600` |
 
 Read-only is the right setting for any agent you are not supervising.
 
 ## Running over HTTP
 
-`--http` binds `127.0.0.1` by default, deliberately. Before changing `THRIVECART_HTTP_HOST`, set `THRIVECART_HTTP_TOKEN`. Otherwise anyone who can reach the port can refund your customers.
+`--http` binds `127.0.0.1` by default, deliberately, and refuses any other address without `THRIVECART_HTTP_TOKEN`, which it then requires as a bearer token. Otherwise anyone who can reach the port could refund your customers.
 
 The transport is stateless: one transport per request, closed with the response, so there is no session table to leak or grow.
 

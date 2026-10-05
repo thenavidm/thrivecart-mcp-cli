@@ -1,5 +1,22 @@
 # Versions
 
+## 3.0.0, 2026-10-05
+
+Built on [Slipway](https://github.com/thenavidm/slipway) 0.1.7. The 24 tools keep their names and arguments, and every difference below was measured against 2.2.3 before release.
+
+- **A person approves each refund and cancellation over MCP.** Claude Code (2.1.246 and later) shows its own prompt for each one, and a client that can show forms asks with an approval form whose one box starts unticked. Approvals are signed, bound to the exact call and work once. Where a client can do neither, the model's `confirm: true` still counts, and `THRIVECART_CONFIRM=model` makes it enough everywhere, for an agent with no person to ask. The refusal still says the refund moves money, and the audit log records who approved each write.
+- **A smaller tool list.** 7,230 tokens in Claude Code with every tool loaded, down from 8,090: the per-tool `$schema` line, an `execution` field and `additionalProperties: false` are gone. The last one advertised strict input while unknown keys were dropped anyway; the schema now says what happens. The two tools that need approval now say so to Claude Code, which asks before each.
+- **Exit codes follow the house contract everywhere.** An unknown command and a write in read-only mode exit 2 instead of 1, and `doctor` with nothing configured exits 10 instead of 1. 1 now means an unexpected error, and a ThriveCart that cannot be reached still exits 5. Errors keep the endpoint and the cart in `details`, and a rate limit says how long to wait.
+- **Much cheaper to find a command through the CLI.** `which <words>` finds one without the full list. In Codex, finding the command that pauses a subscription took 83,647 input tokens instead of 127,587 (median of five), in three commands every time, where 2.2.3 guessed a command that did not exist and read the full list. Over MCP the same task read 21 more out of about 48,000, from the standard `confirm` wording.
+- **`install <client>`** adds the server to Claude Code, Codex, Claude Desktop, Cursor, VS Code or Gemini CLI in each one's own format, naming only the settings that connect a cart.
+- **Less work to start.** The entry turns on Node's compile cache, and the server spends 171 ms of CPU before its first answer where 2.2.3 spent 213 (median of 21 runs, taking turns on one busy Mac). npx installs 4 dependencies instead of 94.
+- **`--help` lists every setting the server reads**, Slipway's own included, and restored tests keep the README and `--help` in step with the code. The `--select` and choice-list cases this repo's tests guarded now live in Slipway's.
+- **README fixes.** The Docker section pointed at an image that was never published; it now builds one from the repository. The exit codes, the refusal and `doctor` are shown as they print, `npm bin -g`, which current npm no longer has, is gone from troubleshooting, the release workflow attaches the desktop extension the README sends people to, and the icon loads from cdn.navid.me. THIRD_PARTY_NOTICES.md lists the production dependencies' licenses.
+
+### Upgrading
+
+Node 22 or newer. Scripts keep working for success, usage errors and missing setup; a script that treated exit 1 as "unknown command" or "read-only" should read 2. Over MCP, expect an approval prompt or form for each refund and cancellation; a headless agent that should act with `confirm: true` alone needs `THRIVECART_CONFIRM=model`. A script that pipes JSON-RPC into the server must keep stdin open until it reads the answer: the server now stops when its input ends, as the MCP stdio binding asks. `--http --port` with something that is not a port number stops with exit 2 instead of using the default, and `--http` will not start on an address other than localhost without `THRIVECART_HTTP_TOKEN`. Two terminal screens grew: the general help by 168 tokens, for `which`, `install`, the flags, the exit codes and the safety settings it now lists, and the command list by 24, for the lines that point to `which` and `--help`.
+
 ## 2.2.3, 2026-10-04
 
 - **`npx -y @thenavidm/thrivecart-mcp-cli` starts the MCP server whatever order npm keeps.** npx starts whichever binary the npm registry lists first when they share one file, and the registry does not keep the published order. For this package that happened to be the server; for 23 others it was the CLI. A third binary named after the package, on its own file, now always starts the server, and npx picks it by name.
