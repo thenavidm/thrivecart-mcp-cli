@@ -281,7 +281,7 @@ THRIVECART_API_KEY=your-api-key npx -y @thenavidm/thrivecart-mcp-cli@latest doct
 ThriveCart doctor
 
   ✓ Node.js               v22.23.1
-  ✓ Version               thrivecart 3.0.0
+  ✓ Version               thrivecart 3.0.1
   ✓ Writes                on
   ✓ Tools                 24 of 24 on
   ✓ Credentials           configured
@@ -763,6 +763,7 @@ Slipway; a test asserts the list here and the one in
 | `THRIVECART_HTTP_PORT` | `8788` | Port to bind |
 | `THRIVECART_HTTP_HOST` | `127.0.0.1` | Interface to bind |
 | `THRIVECART_HTTP_TOKEN` | none | Bearer token. An API key can refund money, so any address but localhost refuses to start without one |
+| `THRIVECART_HTTP_ALLOWED_ORIGINS` | none | Comma-separated browser origins allowed to connect to `--http`; a page from any other site is refused |
 
 ## Versions
 
